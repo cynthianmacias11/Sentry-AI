@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Sentry runtime data
+sentry_log.jsonl
+sentry_progress.txt
