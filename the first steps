@@ -1,0 +1,72 @@
+#Sentry the first version prototype in txt format
+# Please note that this is just to show how it started. Do not use this script.
+# "Successfully breached... err, connected to Yahoo IMAP!"
+
+import email
+import imaplib
+from email.header import decode_header
+
+# Configuration (Use environment variables or test variables for your lab)
+IMAP_SERVER = "imap.mail.yahoo.com"
+EMAIL_USER = "your_burner_email@yahoo.com"
+EMAIL_PASS = "your_yahoo_app_password"
+
+
+def connect_and_scan():
+  try:
+    # 1. Connect to Yahoo securely via IMAP
+    mail = imaplib.IMAP4_SSL(IMAP_SERVER)
+    mail.login(EMAIL_USER, EMAIL_PASS)
+    print("[+] Successfully breached... err, connected to Yahoo IMAP.")
+
+    # Select the inbox
+    mail.select("INBOX")
+
+    # Search for unread messages
+    status, messages = mail.search(None, "UNSEEN")
+    if status != "OK":
+      print("[-] No messages found or search failed.")
+      return
+
+    email_ids = messages[0].split()
+    print(f"[+] Found {len(email_ids)} unread messages to analyze.")
+
+    for e_id in email_ids[:5]:  # Let's cap it at 5 for a quick test run
+      res, msg_data = mail.fetch(e_id, "(RFC822)")
+      for response_part in msg_data:
+        if isinstance(response_part, tuple):
+          msg = email.message_from_bytes(response_part[1])
+
+          # Decode Subject
+          subject, encoding = decode_header(msg["Subject"])[0]
+          if isinstance(subject, bytes):
+            subject = subject.decode(encoding if encoding else "utf-8", errors="ignore")
+
+          # Extract Sender
+          sender = msg.get("From")
+
+          # Extract Body Text
+          body = ""
+          if msg.is_multipart():
+            for part in msg.walk():
+              if part.get_content_type() == "text/plain":
+                body = part.get_payload(decode=True).decode("utf-8", errors="ignore")
+                break
+          else:
+            body = msg.get_payload(decode=True).decode("utf-8", errors="ignore")
+
+          print("-" * 50)
+          print(f"FROM: {sender}")
+          print(f"SUBJECT: {subject}")
+          print(
+              f"BODY PREVIEW: {body[:150]}..."
+          )  # Print first 150 chars for triage
+
+    mail.logout()
+
+  except Exception as e:
+    print(f"[-] Error during execution: {e}")
+
+
+if __name__ == "__main__":
+  connect_and_scan()
